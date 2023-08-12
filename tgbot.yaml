@@ -1,0 +1,5 @@
+token: aaa:bbb
+imagePath: /path/to/images
+adminAccount: 123456789
+debug: true
+info: I understand /help or /setu and I can repeat your message.
