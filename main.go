@@ -133,27 +133,33 @@ func status(bot *tgbotapi.BotAPI, chatID int64) {
 func setu(bot *tgbotapi.BotAPI, chatID int64) {
 	//imageId := rand.Intn(len(Images) - 1)
 	//filename := Images[imageId]
-	resp, err := http.Get("https://api.lolicon.app/setu/v2?r18=2&tag=%E8%90%9D%E8%8E%89")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
+	var loliconApiRet model.LoliconApiRet
+	for {
+		resp, err := http.Get("https://api.lolicon.app/setu/v2?r18=2&tag=%E8%90%9D%E8%8E%89")
 		if err != nil {
+			fmt.Println(err)
 			return
 		}
-	}(resp.Body)
-	body, _ := io.ReadAll(resp.Body)
-	var loliconApiRet model.LoliconApiRet
-	err = json.Unmarshal(body, &loliconApiRet)
-	if err != nil {
-		fmt.Println(err)
+		defer func(Body io.ReadCloser) {
+			err := Body.Close()
+			if err != nil {
+				return
+			}
+		}(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
+		err = json.Unmarshal(body, &loliconApiRet)
+		if err != nil {
+			fmt.Println(err)
+		}
+		resp, err = http.Get(loliconApiRet.Data[0].Urls.Original)
+		if resp.StatusCode == 200 {
+			break
+		}
 	}
 	title := loliconApiRet.Data[0].Title
 	link := loliconApiRet.Data[0].Urls.Original
 	mdString := fmt.Sprintf("[%s](%s)", title, link)
-	err = sendPhoto(bot, chatID, mdString)
+	err := sendPhoto(bot, chatID, mdString)
 	if err != nil {
 		setu(bot, chatID)
 	}
