@@ -69,7 +69,7 @@ func sendPhoto(bot *tgbotapi.BotAPI, chatID int64, imagePath string) error {
 	//SengImageTotal++
 	//return nil
 	msg := tgbotapi.NewMessage(chatID, imagePath)
-	msg.ParseMode = "Markdown"
+	msg.ParseMode = "MarkdownV2"
 	if _, err := bot.Send(msg); err != nil {
 		log.Panic(err)
 	}
@@ -135,7 +135,7 @@ func setu(bot *tgbotapi.BotAPI, chatID int64) {
 	//filename := Images[imageId]
 	var loliconApiRet model.LoliconApiRet
 	for {
-		resp, err := http.Get("https://api.lolicon.app/setu/v2?r18=2&tag=%E8%90%9D%E8%8E%89")
+		resp, err := http.Get("")
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -158,7 +158,12 @@ func setu(bot *tgbotapi.BotAPI, chatID int64) {
 	}
 	title := loliconApiRet.Data[0].Title
 	link := loliconApiRet.Data[0].Urls.Original
-	mdString := fmt.Sprintf("[%s](%s)", title, link)
+	mdString := ""
+	if loliconApiRet.Data[0].R18 == true {
+		mdString = fmt.Sprintf("||[%s](%s)||", title, link)
+	} else {
+		mdString = fmt.Sprintf("[%s](%s)", title, link)
+	}
 	err := sendPhoto(bot, chatID, mdString)
 	if err != nil {
 		setu(bot, chatID)
