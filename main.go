@@ -1,19 +1,21 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"gopkg.in/yaml.v2"
+	"io"
 	"log"
-	"math/rand"
+	"net/http"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strconv"
+	"tgbot/model"
 	"time"
 )
 
-var conf = new(Config)
+var conf = new(model.Config)
 
 var StartTime time.Time
 var Images []string
@@ -32,17 +34,17 @@ func login() *tgbotapi.BotAPI {
 	return bot
 }
 
-func loadImage() []string {
-	var files []string
-	err := filepath.Walk(conf.ImagePath, func(path string, info os.FileInfo, err error) error {
-		files = append(files, path)
-		return nil
-	})
-	if err != nil {
-		panic(err)
-	}
-	return files
-}
+//func loadImage() []string {
+//	var files []string
+//	err := filepath.Walk(conf.ImagePath, func(path string, info os.FileInfo, err error) error {
+//		files = append(files, path)
+//		return nil
+//	})
+//	if err != nil {
+//		panic(err)
+//	}
+//	return files
+//}
 
 func sendText(bot *tgbotapi.BotAPI, chatID int64, text string) {
 	if !Enabled {
@@ -57,12 +59,19 @@ func sendText(bot *tgbotapi.BotAPI, chatID int64, text string) {
 }
 
 func sendPhoto(bot *tgbotapi.BotAPI, chatID int64, imagePath string) error {
-	if !Enabled {
-		return nil
-	}
-	photo := tgbotapi.NewPhoto(chatID, tgbotapi.FilePath(imagePath))
-	if _, err := bot.Send(photo); err != nil {
-		return nil
+	//if !Enabled {
+	//	return nil
+	//}
+	//photo := tgbotapi.NewPhoto(chatID, tgbotapi.FilePath(imagePath))
+	//if _, err := bot.Send(photo); err != nil {
+	//	return nil
+	//}
+	//SengImageTotal++
+	//return nil
+	msg := tgbotapi.NewMessage(chatID, imagePath)
+	msg.ParseMode = "Markdown"
+	if _, err := bot.Send(msg); err != nil {
+		log.Panic(err)
 	}
 	SengImageTotal++
 	return nil
@@ -122,9 +131,29 @@ func status(bot *tgbotapi.BotAPI, chatID int64) {
 }
 
 func setu(bot *tgbotapi.BotAPI, chatID int64) {
-	imageId := rand.Intn(len(Images) - 1)
-	filename := Images[imageId]
-	err := sendPhoto(bot, chatID, filename)
+	//imageId := rand.Intn(len(Images) - 1)
+	//filename := Images[imageId]
+	resp, err := http.Get("https://api.lolicon.app/setu/v2?r18=2&tag=%E8%90%9D%E8%8E%89")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			return
+		}
+	}(resp.Body)
+	body, _ := io.ReadAll(resp.Body)
+	var loliconApiRet model.LoliconApiRet
+	err = json.Unmarshal(body, &loliconApiRet)
+	if err != nil {
+		fmt.Println(err)
+	}
+	title := loliconApiRet.Data[0].Title
+	link := loliconApiRet.Data[0].Urls.Original
+	mdString := fmt.Sprintf("[%s](%s)", title, link)
+	err = sendPhoto(bot, chatID, mdString)
 	if err != nil {
 		setu(bot, chatID)
 	}
@@ -216,8 +245,8 @@ func main() {
 	bot := login()
 	log.Printf("Authorized on account %s", bot.Self.UserName)
 
-	Images = loadImage()
-	log.Printf("load %d image(s) from %s", len(Images), conf.ImagePath)
+	//Images = loadImage()
+	//log.Printf("load %d image(s) from %s", len(Images), conf.ImagePath)
 
 	getUpdate(bot)
 }
